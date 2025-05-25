@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>化学反应类型大师赛</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f8ff;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            position: relative; /* 添加相对定位 */
+        }
+        .reaction {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 25px 0;
+            padding: 20px 40px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            position: relative;
+        }
+        .equation {
+            display: flex;
+            align-items: center;
+            font-size: 1.4em;
+        }
+        .condition {
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #e74c3c; /* 与得分文字颜色一致 */
+            font-size: 0.5em;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .trangle{
+            top: 5px;
+        }
+        .equal {
+            font-size: 1.4em;
+            margin: 0 10px;
+            font-family: 'Cambria Math', Symbola;
+            position: relative;
+            opacity: 1; /* 设置透明度为 1，使等号颜色加深为黑色 */
+            color: #000; 
+        }
+        .options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+        button {
+            padding: 15px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .option-btn {
+            background: #3498db;
+            color: white;
+        }
+        .option-btn:hover:not(:disabled) {
+            background: #2980b9;
+        }
+        .control-btn {
+            background: #2ecc71;
+            color: white;
+            width: 200px;
+            margin: 10px auto;
+        }
+        .score {
+            font-size: 1.6em;
+            color: #e74c3c;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .feedback {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .correct {
+            background: #d4edda;
+            color: #155724;
+        }
+        .wrong {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .result {
+            font-size: 2em;
+            text-align: center;
+            margin: 25px 0;
+        }
+        :disabled {
+            background: #bdc3c7 !important;
+            cursor: not-allowed;
+        }
+        .celebration {
+            font-size: 2em;
+            animation: bounce 1s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        .question-number {
+            position: absolute;
+            left: 15px;
+            background: #3498db;
+            color: white;
+            width: 40px; /* 确保宽度和高度相等 */
+            height: 40px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.2em;
+            display: flex; /* 使用flex布局居中数字 */
+            align-items: center;
+            justify-content: center;
+        }
+        #timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.2em;
+            color: #e74c3c;
+        }
+	.textColor {
+	    color: rgb(231, 76, 60);
+	}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center;">🔥 化学反应类型大师赛 🔥</h1>
+        <div id="rules">
+            <h3>📖 游戏规则：</h3>
+            <p>🎯 本游戏会随机抽取10个化学反应</p>
+            <p>🔢 从五个选项中选择正确答案</p>
+            <p>🏆 计分规则：满分100分，答对一题得10分</p>
+            <button class="control-btn" onclick="startGame();">开始挑战！</button>
+        </div>
+        <div id="game" style="display: none;">
+            <div id="timer">0:00</div>
+            <div class="score">得分：<span id="currentScore">0</span>/100</div>
+            <div class="reaction" id="reaction"></div>
+            <div class="options" id="options"></div>
+            <div id="feedback"></div>
+            <button class="control-btn" id="nextBtn" style="display: none;" onclick="nextQuestion()">下一题 →</button>
+        </div>
+        <div id="result" style="display: none;"></div>
+    </div>
+
+    <!-- 添加音频元素 -->
+    <!-- <audio id="clickSound" src="click.mp3"></audio>
+    <audio id="winSound" src="win.mp3"></audio>
+    <audio id="tryAgainSound" src="try_again.mp3"></audio> -->
+
+    <script>
+        const isWindows = function OSnow(){
+            const agent = navigator.userAgent.toLowerCase();
+            if (agent.indexOf("win32") >= 0 || agent.indexOf("wow32") >= 0) {
+                return true;
+            }
+            if (agent.indexOf("win64") >= 0 || agent.indexOf("wow64") >= 0) {
+                return true;
+            }
+        }();
+
+        // 题库数据和反应类型定义
+        const questions = [
+            { reaction: "2H₂ + O₂ → 2H₂O", condition: "点燃", type: "化合反应" },
+            { reaction: "CaO + H₂O → Ca(OH)₂", condition: "", type: "化合反应" },
+            { reaction: "2H₂O₂ → 2H₂O + O₂↑", condition: "MnO₂", type: "分解反应" },
+            { reaction: "2KMnO₄ → K₂MnO₄ + MnO₂ + O₂↑", condition: "△", type: "分解反应" },
+            { reaction: "Zn + H₂SO₄ → ZnSO₄ + H₂↑", condition: "", type: "置换反应" },
+            { reaction: "Fe + CuSO₄ → FeSO₄ + Cu", condition: "", type: "置换反应" },
+            { reaction: "HCl + NaOH → NaCl + H₂O", condition: "", type: "复分解反应" },
+            { reaction: "AgNO₃ + NaCl → AgCl↓ + NaNO₃", condition: "", type: "复分解反应" },
+            { reaction: "CO + CuO → Cu + CO₂", condition: "△", type: "不属于基本反应类型" },
+            { reaction: "CH₄ + 2O₂ → CO₂ + 2H₂O", condition: "点燃", type: "不属于基本反应类型" },
+            { reaction: "S + O₂ → SO₂", condition: "点燃", type: "化合反应" },
+            { reaction: "2HgO → 2Hg + O₂↑", condition: "△", type: "分解反应" },
+            { reaction: "C + 2CuO → 2Cu + CO₂↑", condition: "高温", type: "置换反应" },
+            { reaction: "Na₂CO₃ + Ca(OH)₂ → 2NaOH + CaCO₃↓", condition: "", type: "复分解反应" },
+            { reaction: "3CO + Fe₂O₃ → 2Fe + 3CO₂", condition: "高温", type: "不属于基本反应类型" }
+        ];
+
+        const typeDefinitions = {
+            "化合反应": "两种或两种以上物质生成一种新物质的反应（A + B → C）",
+            "分解反应": "一种物质分解成两种或两种以上新物质的反应（C → A + B）",
+            "置换反应": "单质与化合物反应生成新单质和新化合物的反应（A + BC → AC + B）", 
+            "复分解反应": "两种化合物互相交换成分生成两种新化合物的反应（AB + CD → AD + CB）",
+            "不属于基本反应类型": "不符合上述四种基本类型的特殊反应（如氧化还原反应）"
+        };
+
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let startTime;
+        let timerInterval;
+
+        function startGame() {
+            document.getElementById("rules").style.display = "none";
+            document.getElementById("game").style.display = "block";
+            document.getElementById("result").style.display = "none";
+            currentQuestions = getRandomQuestions();
+            currentQuestionIndex = 0;
+            score = 0;
+            updateScore();
+            showQuestion();
+            startTime = new Date().getTime();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function getRandomQuestions() {
+            return [...questions].sort(() => Math.random() - 0.5).slice(0, 10);
+        }
+
+        function renderReaction(question) {
+            const [left, right] = question.reaction.split("→");
+            const classTrangle = isWindows && question.condition === '△' ? 'trangle' : '';
+            return `
+                <div class="equation">
+                    <span>${left.trim()}</span>
+                    <span class="equal">
+                        ${question.condition ? `<div class="condition ${classTrangle}">${question.condition}</div>` : ''}
+                        ══
+                    </span>
+                    <span>${right.trim()}</span>
+                </div>
+            `;
+        }
+
+        function showQuestion() {
+            const question = currentQuestions[currentQuestionIndex];
+            const reactionDiv = document.getElementById("reaction");
+            
+            // 清空并添加题号和反应式
+            reactionDiv.innerHTML = `
+                <div class="question-number">${currentQuestionIndex + 1}</div>
+                ${renderReaction(question)}
+            `;
+            
+            const optionsDiv = document.getElementById("options");
+            optionsDiv.innerHTML = Object.keys(typeDefinitions)
+                .map((type, index) => `
+                    <button class="option-btn" onclick="checkAnswer('${type}')">
+                        ${index + 1}. ${type}
+                    </button>
+                `).join("");
+            
+            document.getElementById("nextBtn").style.display = "none";
+            document.getElementById("feedback").innerHTML = "";
+        }
+
+        function checkAnswer(selectedType) {
+            const correctType = currentQuestions[currentQuestionIndex].type;
+            const options = document.querySelectorAll(".option-btn");
+            options.forEach(btn => btn.disabled = true);
+            
+            const feedbackDiv = document.getElementById("feedback");
+            if (selectedType === correctType) {
+                score += 10;
+                feedbackDiv.innerHTML = `<div class="feedback correct">✅ 回答正确！</div>`;
+            } else {
+                feedbackDiv.innerHTML = `
+                    <div class="feedback wrong">
+                        ❌ 正确答案：${correctType}<br>
+                        ${typeDefinitions[correctType]}
+                    </div>
+                `;
+            }
+            
+            updateScore();
+            document.getElementById("nextBtn").style.display = "block";
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < 10) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function updateScore() {
+            document.getElementById("currentScore").textContent = score;
+        }
+
+        function updateTimer() {
+            const currentTime = new Date().getTime();
+            const elapsedTime = currentTime - startTime;
+            const minutes = Math.floor(elapsedTime / 60000);
+            const seconds = Math.floor((elapsedTime % 60000) / 1000);
+            const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById("timer").textContent = formattedTime;
+        }
+
+        function showResult() {
+            clearInterval(timerInterval);
+            const currentTime = new Date().getTime();
+            const elapsedTime = currentTime - startTime;
+            const minutes = Math.floor(elapsedTime / 60000);
+            const seconds = Math.floor((elapsedTime % 60000) / 1000);
+            const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            document.getElementById("game").style.display = "none";
+            const resultDiv = document.getElementById("result");
+            resultDiv.style.display = "block";
+            
+            let emoji = "😭 再接再厉！";
+            let message = "继续努力！";
+            let src = 'https://img.tukuppt.com/newpreview_music/08/99/22/5c88ef984e3ca87363.mp3'
+            if (score >= 60 && score < 100) {
+                emoji = "😊 表现不错！";
+                message = "接近完美了！";
+            }
+            if (score === 100) {
+                emoji = "🎉😄 完美胜利！";
+                message = "全部答对！";
+                src = 'https://img.tukuppt.com/newpreview_music/01/66/57/63c0ead33306f167.mp3'
+            }
+            
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h2>挑战结束！</h2>
+                    <div class="celebration">${emoji}</div>
+                    <p  class="textColor">${message} 最终得分：${score}/100</p>
+                    <p class="textColor">总用时：${formattedTime}</p>
+                    ${score === 100 ? "" : `<button class="control-btn" onclick="startGame()">重新挑战</button>`}
+                </div>
+                <div>
+                    <h3>反应类型定义：</h3>
+                    ${Object.entries(typeDefinitions).map(([type, def]) => `
+                        <p><strong>${type}：</strong>${def}</p>
+                    `).join("")}
+                </div>
+                <audio src="${src}" autoplay="autoplay" />
+            `;
+        }
+    </script>
+</body>
+</html>
